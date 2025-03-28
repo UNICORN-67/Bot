@@ -1,7 +1,7 @@
 const { Telegraf } = require("telegraf");
 const mongoose = require("mongoose");
 const logger = require("./utils/logger");
-const config = require("./config"); // ✅ Importing config.js
+const config = require("./config/config"); // ✅ Importing config.js
 
 // Import Commands
 const adminCommands = require("./commands/admin");
