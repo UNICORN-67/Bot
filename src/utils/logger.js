@@ -1,44 +1,39 @@
-const fs = require("fs");
+const { createLogger, format, transports } = require("winston");
 const path = require("path");
-const Log = require("../database/logModel");
+const fs = require("fs");
 
-const logFilePath = path.join(__dirname, "../../logs/bot.log");
+// ✅ Ensure Logs Directory Exists
+const logDir = path.join(__dirname, "../../logs");
+if (!fs.existsSync(logDir)) {
+    fs.mkdirSync(logDir, { recursive: true });
+}
 
-// 📌 Function to log actions in both MongoDB & local file
-const logAction = async (action, user, admin, chat) => {
-  try {
-    const logEntry = new Log({
-      action,
-      user: {
-        id: user.id,
-        username: user.username || "N/A",
-        first_name: user.first_name,
-      },
-      admin: {
-        id: admin.id,
-        username: admin.username || "N/A",
-        first_name: admin.first_name,
-      },
-      chat: {
-        id: chat.id,
-        title: chat.title || "Private Chat",
-      },
-    });
+// ✅ Define Log Format
+const logFormat = format.combine(
+    format.timestamp({ format: "YYYY-MM-DD HH:mm:ss" }),
+    format.printf(({ timestamp, level, message }) => {
+        // Ensure message is always a string to prevent TypeErrors
+        const safeMessage = typeof message === "string" ? message : JSON.stringify(message, null, 2);
+        return `${timestamp} [${level.toUpperCase()}]: ${safeMessage}`;
+    })
+);
 
-    await logEntry.save(); // Save to MongoDB
+// ✅ Create Logger
+const logger = createLogger({
+    level: "info", // Log levels: error, warn, info, http, verbose, debug, silly
+    format: logFormat,
+    transports: [
+        new transports.Console({ format: format.combine(format.colorize(), logFormat) }),
+        new transports.File({ filename: path.join(logDir, "bot.log"), level: "info" }),
+        new transports.File({ filename: path.join(logDir, "error.log"), level: "error" })
+    ]
+});
 
-    // Create log text format
-    const logText = `[${new Date().toISOString()}] [${chat.title}] ${admin.first_name} (${admin.id}) ${action} ${user.first_name} (${user.id})\n`;
-
-    // Append log to file
-    fs.appendFile(logFilePath, logText, (err) => {
-      if (err) console.error("❌ File Logging Error:", err);
-    });
-
-    console.log(`✅ Logged: ${action} - ${user.first_name} by ${admin.first_name}`);
-  } catch (err) {
-    console.error("❌ Logging Error:", err);
-  }
+// ✅ Safe Logger Wrapper to Avoid TypeErrors
+const safeLogger = {
+    info: (msg) => logger.info(typeof msg === "string" ? msg : JSON.stringify(msg, null, 2)),
+    warn: (msg) => logger.warn(typeof msg === "string" ? msg : JSON.stringify(msg, null, 2)),
+    error: (msg) => logger.error(typeof msg === "string" ? msg : JSON.stringify(msg, null, 2))
 };
 
-module.exports = logAction;
+module.exports = safeLogger;
