@@ -1,7 +1,7 @@
 require("dotenv").config();
 
 module.exports = {
-  BOT_TOKEN: process.env.BOT_TOKEN || "7604223918:AAEtPgB1Vj4gCc2v-zcfUwJ74XhvzzepTYo",
+  BOT_TOKEN: process.env.BOT_TOKEN || "8041760696:AAFCX7zf9pquBLU8RybFcAv6TtXCybdsa58",
   MONGO_URI: process.env.MONGO_URI || "mongodb+srv://parthtsingh:parthsingh@cluster0.a2hzo.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0",
   OWNER_ID: process.env.OWNER_ID ? parseInt(process.env.OWNER_ID) : 7661577681,
   LOGGING_ENABLED: process.env.LOGGING_ENABLED === "true",
