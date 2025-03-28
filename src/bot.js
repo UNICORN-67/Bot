@@ -12,19 +12,11 @@ const pingCommand = require("./commands/ping");
 // Initialize Bot
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
-// ✅ Connect to MongoDB
-async function connectDB() {
-    try {
-        await mongoose.connect(process.env.MONGO_URI, {
-            useNewUrlParser: true,
-            useUnifiedTopology: true,
-        });
-        logger.info("✅ MongoDB Connected Successfully.");
-    } catch (err) {
-        logger.error(`❌ MongoDB Connection Error: ${err.message}`);
-        process.exit(1);
-    }
-}
+// Connect to MongoDB
+mongoose
+  .connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+  .then(() => console.log("✅ MongoDB Connected"))
+  .catch((err) => console.error("MongoDB Connection Error:", err));
 
 // ✅ Start Command
 bot.start((ctx) => {
