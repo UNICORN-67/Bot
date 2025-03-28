@@ -1,17 +1,19 @@
 const { Telegraf } = require("telegraf");
 const mongoose = require("mongoose");
 const logger = require("./utils/logger");
-const config = require("./config/config"); // ✅ Importing config.js
+const config = require("./config/config");
 
 // Import Commands
 const adminCommands = require("./commands/admin");
 const generalCommands = require("./commands/general");
 const pingCommand = require("./commands/ping");
+const idCommand = require("./commands/id");
+const userInfoCommand = require("./commands/userinfo");
 
 // Initialize Bot
 const bot = new Telegraf(config.BOT_TOKEN);
 
-// ✅ MongoDB Connection Function
+// ✅ MongoDB Connection
 async function connectDB() {
     try {
         await mongoose.connect(config.MONGO_URI, {
@@ -43,20 +45,73 @@ function reconnectDB() {
     }, 5000);
 }
 
-// ✅ Start Command
+// ✅ Start Command (Updated)
 bot.start((ctx) => {
-    ctx.reply("👋 Welcome! Use /help for commands.");
-    logger.info(`User ${ctx.from.username || "Unknown"} (ID: ${ctx.from.id}) started the bot.`);
+    const user = ctx.from;
+    const welcomeMessage = `
+👋 *Welcome, ${user.first_name || "User"}!*  
+I am a Telegram Group Management Bot. Use /help to see what I can do!  
+
+🔹 *Basic Commands:*
+  - /help - Show all available commands
+  - /ping - Check bot response time
+  - /id - Get your Telegram ID
+  - /userinfo - Get detailed user info
+
+📢 *Group Admin Features:*
+- Ban, mute, promote, demote users.
+- Secure & fast moderation.
+
+🚀 Add me to your group and make managing easier!`;
+
+    ctx.reply(welcomeMessage, { parse_mode: "Markdown" });
+
+    // Log User Interaction
+    logger.info(`✅ User ${user.username || "Unknown"} (ID: ${user.id}) started the bot.`);
 });
 
-// ✅ Help Command
+// ✅ Help Command (Updated)
 bot.help((ctx) => {
-    ctx.reply("📌 Available commands:\n/start, /ping, /ban, /unban, /mute, /promote, /demote.");
+    const helpMessage = `
+🤖 *Bot Commands Guide*
+
+🔹 *General Commands:*
+  - /start - Start the bot
+  - /help - Show this help message
+  - /ping - Check bot response time
+  - /id - Get your Telegram ID
+  - /userinfo - Get detailed user info
+
+🔹 *Admin Commands* _(Group Only)_
+  - /ban [reply] - Ban a user
+  - /unban [user_id] - Unban a user
+  - /mute [reply] - Mute a user
+  - /promote [reply] - Promote a user to admin
+  - /demote [reply] - Demote an admin to a regular user
+
+📌 *Usage Notes:*
+- Reply to a user's message when using /ban, /mute, /promote, or /demote.
+- /unban requires the user’s Telegram ID.
+- Admin commands work only in groups.
+
+📢 *For any issues, contact the bot owner.*`;
+
+    ctx.reply(helpMessage, { parse_mode: "Markdown" });
 });
 
 // ✅ Ping Command
 bot.command("ping", async (ctx) => {
     await pingCommand.ping(ctx);
+});
+
+// ✅ ID Command
+bot.command("id", async (ctx) => {
+    await idCommand.id(ctx);
+});
+
+// ✅ User Info Command
+bot.command("userinfo", async (ctx) => {
+    await userInfoCommand.userinfo(ctx);
 });
 
 // ✅ Admin Commands (Only Work in Groups)
@@ -81,7 +136,7 @@ bot.catch((err, ctx) => {
     ctx.reply("⚠️ An error occurred. Please try again later.");
 });
 
-// ✅ Graceful Shutdown for MongoDB
+// ✅ Graceful Shutdown
 const shutdownBot = (signal) => {
     bot.stop(signal);
     mongoose.connection.close(() => logger.info(`⚠️ MongoDB Disconnected. Bot stopped (${signal}).`));
