@@ -21,12 +21,12 @@ async function connectDB() {
         });
 
         mongoose.connection.on("connected", () => logger.info("✅ MongoDB Connected Successfully."));
-        mongoose.connection.on("error", (err) => logger.error(`❌ MongoDB Error: ${err.message}`));
+        mongoose.connection.on("error", (err) => logger.error(`❌ MongoDB Error: ${JSON.stringify(err, null, 2)}`));
         mongoose.connection.on("disconnected", () => logger.warn("⚠️ MongoDB Disconnected. Reconnecting..."));
 
         return true;
     } catch (err) {
-        logger.error(`❌ MongoDB Connection Failed: ${err.message}`);
+        logger.error(`❌ MongoDB Connection Failed: ${JSON.stringify(err, null, 2)}`);
         process.exit(1);
     }
 }
@@ -70,7 +70,7 @@ bot.on("text", async (ctx) => {
 
 // ✅ Error Handling
 bot.catch((err, ctx) => {
-    logger.error(`❌ Bot Error: ${err.message}`);
+    logger.error(`❌ Bot Error: ${JSON.stringify(err, null, 2)}`);
     ctx.reply("⚠️ An error occurred. Please try again later.");
 });
 
@@ -81,7 +81,7 @@ bot.catch((err, ctx) => {
         bot.launch().then(() => {
             logger.info("🚀 Bot started successfully.");
         }).catch((err) => {
-            logger.error(`❌ Bot launch failed: ${err.message}`);
+            logger.error(`❌ Bot launch failed: ${JSON.stringify(err, null, 2)}`);
             process.exit(1);
         });
     }
@@ -95,4 +95,5 @@ const shutdownBot = (signal) => {
 
 process.on("SIGINT", () => shutdownBot("SIGINT"));
 process.on("SIGTERM", () => shutdownBot("SIGTERM"));
- 
+
+            
