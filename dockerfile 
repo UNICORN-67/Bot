@@ -1,22 +1,21 @@
-# Use an official Node.js image
-FROM node:18
+FROM node:20-alpine
 
-# Set the working directory inside the container
+# Set working directory
 WORKDIR /app
 
-# Copy package.json and package-lock.json for efficient caching
-COPY package*.json ./
+# Copy package.json and package-lock.json
+COPY package.json package-lock.json ./
 
 # Install dependencies
-RUN npm install --omit=dev
+RUN npm install --only=production
 
-# Copy the entire bot source code into the container
+# Copy the rest of the application files
 COPY . .
 
-# Expose port (Only if using Express for a web dashboard)
+# Expose the bot's port if needed
 EXPOSE 3000
 
-# Set environment variables (Use .env file for secrets)
+# Set environment variables (optional)
 ENV NODE_ENV=production
 
 # Start the bot
