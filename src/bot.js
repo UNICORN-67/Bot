@@ -1,6 +1,6 @@
 require("dotenv").config();
 const { Telegraf } = require("telegraf");
-const mongoose = require("../src/database/connection");
+const mongoose = require("mongoose");
 const logger = require("./utils/logger");
 const userInfo = require("./utils/userInfo");
 
@@ -12,13 +12,19 @@ const pingCommand = require("./commands/ping");
 // Initialize Bot
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
-// ✅ Ensure MongoDB Connection Before Launching
-mongoose.connection.on("connected", () => {
-    logger.info("✅ Connected to MongoDB.");
-}).on("error", (err) => {
-    logger.error(`❌ MongoDB Connection Error: ${err.message}`);
-    process.exit(1); // Exit if DB connection fails
-});
+// ✅ Connect to MongoDB
+async function connectDB() {
+    try {
+        await mongoose.connect(process.env.MONGO_URI, {
+            useNewUrlParser: true,
+            useUnifiedTopology: true,
+        });
+        logger.info("✅ MongoDB Connected Successfully.");
+    } catch (err) {
+        logger.error(`❌ MongoDB Connection Error: ${err.message}`);
+        process.exit(1);
+    }
+}
 
 // ✅ Start Command
 bot.start((ctx) => {
@@ -63,17 +69,21 @@ bot.catch((err, ctx) => {
     ctx.reply("⚠️ An error occurred. Please try again later.");
 });
 
-// ✅ Start Bot
-bot.launch().then(() => {
-    logger.info("🚀 Bot started successfully.");
-}).catch((err) => {
-    logger.error(`❌ Bot launch failed: ${err.message}`);
-    process.exit(1);
-});
+// ✅ Start Bot with MongoDB Connection
+(async () => {
+    await connectDB(); // Ensure MongoDB is connected before starting the bot
+    bot.launch().then(() => {
+        logger.info("🚀 Bot started successfully.");
+    }).catch((err) => {
+        logger.error(`❌ Bot launch failed: ${err.message}`);
+        process.exit(1);
+    });
+})();
 
 // ✅ Graceful Shutdown
 const shutdownBot = (signal) => {
     bot.stop(signal);
+    mongoose.connection.close();
     logger.info(`⚠️ Bot stopped gracefully (${signal}).`);
 };
 
