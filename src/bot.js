@@ -12,57 +12,70 @@ const pingCommand = require("./commands/ping");
 // Initialize Bot
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
-// ✅ Ensure MongoDB Connection Before Starting
-mongoose.connection.once("open", () => {
-    logger.info("Connected to MongoDB.");
+// ✅ Ensure MongoDB Connection Before Launching
+mongoose.connection.on("connected", () => {
+    logger.info("✅ Connected to MongoDB.");
 }).on("error", (err) => {
-    logger.error(`MongoDB Connection Error: ${err.message}`);
+    logger.error(`❌ MongoDB Connection Error: ${err.message}`);
+    process.exit(1); // Exit if DB connection fails
 });
 
 // ✅ Start Command
 bot.start((ctx) => {
     const user = userInfo.getUserInfo(ctx);
+    ctx.reply(ctx.chat.type === "private" 
+        ? `👋 Welcome, ${user.firstName}!\nUse /help to see available commands.` 
+        : `👋 Hello Group Members! I'm here to assist admins. Type /help for commands.`
+    );
     logger.info(`User ${user.username} (ID: ${user.id}) started the bot.`);
-    ctx.reply(`Welcome, ${user.firstName}! Use /help to see available commands.`);
 });
 
 // ✅ Help Command
 bot.help((ctx) => {
-    ctx.reply("Available commands: /start, /ping, /ban, /unban, /mute, /promote, /demote.");
+    ctx.reply("📌 Available commands:\n/start, /ping, /ban, /unban, /mute, /promote, /demote.");
 });
 
 // ✅ Ping Command (Latency Check)
-bot.command("ping", (ctx) => pingCommand.ping(ctx));
+bot.command("ping", async (ctx) => {
+    await pingCommand.ping(ctx);
+});
 
-// ✅ Admin Commands
-bot.command("ban", (ctx) => adminCommands.ban(ctx));
-bot.command("unban", (ctx) => adminCommands.unban(ctx));
-bot.command("mute", (ctx) => adminCommands.mute(ctx));
-bot.command("promote", (ctx) => adminCommands.promote(ctx));
-bot.command("demote", (ctx) => adminCommands.demote(ctx));
+// ✅ Admin Commands (Only Work in Groups)
+const adminOnlyCommands = ["ban", "unban", "mute", "promote", "demote"];
+adminOnlyCommands.forEach((cmd) => {
+    bot.command(cmd, async (ctx) => {
+        if (ctx.chat.type !== "private") {
+            await adminCommands[cmd](ctx);
+        } else {
+            ctx.reply("⚠️ This command can only be used in groups.");
+        }
+    });
+});
 
 // ✅ General Commands
-bot.on("text", (ctx) => generalCommands.handleText(ctx));
+bot.on("text", async (ctx) => {
+    await generalCommands.handleText(ctx);
+});
 
 // ✅ Error Handling
 bot.catch((err, ctx) => {
-    logger.error(`Error in bot: ${err.message}`);
+    logger.error(`❌ Bot Error: ${err.message}`);
     ctx.reply("⚠️ An error occurred. Please try again later.");
 });
 
 // ✅ Start Bot
 bot.launch().then(() => {
-    logger.info("Bot started successfully.");
+    logger.info("🚀 Bot started successfully.");
 }).catch((err) => {
-    logger.error(`Bot launch failed: ${err.message}`);
+    logger.error(`❌ Bot launch failed: ${err.message}`);
+    process.exit(1);
 });
 
 // ✅ Graceful Shutdown
-process.on("SIGINT", () => {
-    bot.stop("SIGINT");
-    logger.info("Bot stopped gracefully.");
-});
-process.on("SIGTERM", () => {
-    bot.stop("SIGTERM");
-    logger.info("Bot stopped gracefully.");
-});
+const shutdownBot = (signal) => {
+    bot.stop(signal);
+    logger.info(`⚠️ Bot stopped gracefully (${signal}).`);
+};
+
+process.on("SIGINT", () => shutdownBot("SIGINT"));
+process.on("SIGTERM", () => shutdownBot("SIGTERM"));
