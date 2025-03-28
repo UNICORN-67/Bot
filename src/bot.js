@@ -1,3 +1,4 @@
+require("dotenv").config();
 const { Telegraf } = require("telegraf");
 const mongoose = require("mongoose");
 const logger = require("./utils/logger");
@@ -10,25 +11,29 @@ const pingCommand = require("./commands/ping");
 const idCommand = require("./commands/id");
 const userInfoCommand = require("./commands/userinfo");
 
-// Initialize Bot
+// ✅ Ensure required environment variables are loaded
+if (!config.BOT_TOKEN || !config.MONGO_URI) {
+    logger.error("❌ Missing BOT_TOKEN or MONGO_URI in config.");
+    process.exit(1);
+}
+
+// ✅ Initialize Bot
 const bot = new Telegraf(config.BOT_TOKEN);
 
-// ✅ MongoDB Connection
+// ✅ MongoDB Connection Handling
 async function connectDB() {
     try {
         await mongoose.connect(config.MONGO_URI, {
             useNewUrlParser: true,
             useUnifiedTopology: true,
             serverSelectionTimeoutMS: 5000,
-            socketTimeoutMS: 45000,
-            family: 4,
         });
 
-        mongoose.connection.on("connected", () => logger.info("✅ MongoDB Connected Successfully."));
+        mongoose.connection.on("connected", () => logger.info("✅ MongoDB Connected."));
         mongoose.connection.on("error", (err) => logger.error(`❌ MongoDB Error: ${err.message}`));
         mongoose.connection.on("disconnected", () => {
             logger.warn("⚠️ MongoDB Disconnected! Reconnecting...");
-            reconnectDB();
+            setTimeout(connectDB, 5000);
         });
 
     } catch (err) {
@@ -37,84 +42,42 @@ async function connectDB() {
     }
 }
 
-// ✅ Auto-Reconnect Function
-function reconnectDB() {
-    setTimeout(() => {
-        logger.info("🔄 Attempting MongoDB Reconnection...");
-        connectDB();
-    }, 5000);
-}
-
-// ✅ Start Command (Updated)
+// ✅ Start Command
 bot.start((ctx) => {
     const user = ctx.from;
-    const welcomeMessage = `
+    ctx.reply(`
 👋 *Welcome, ${user.first_name || "User"}!*  
-I am a Telegram Group Management Bot. Use /help to see what I can do!  
+Use /help to see available commands.  
+🚀 Add me to your group for powerful admin tools!  
+    `, { parse_mode: "Markdown" });
 
-🔹 *Basic Commands:*
-  - /help - Show all available commands
-  - /ping - Check bot response time
-  - /id - Get your Telegram ID
-  - /userinfo - Get detailed user info
-
-📢 *Group Admin Features:*
-- Ban, mute, promote, demote users.
-- Secure & fast moderation.
-
-🚀 Add me to your group and make managing easier!`;
-
-    ctx.reply(welcomeMessage, { parse_mode: "Markdown" });
-
-    // Log User Interaction
     logger.info(`✅ User ${user.username || "Unknown"} (ID: ${user.id}) started the bot.`);
 });
 
-// ✅ Help Command (Updated)
+// ✅ Help Command
 bot.help((ctx) => {
-    const helpMessage = `
-🤖 *Bot Commands Guide*
+    ctx.reply(`
+🤖 *Bot Commands*  
+- /ping - Check bot response time  
+- /id - Get your Telegram ID  
+- /userinfo - Get user details  
+- /help - Show available commands  
 
-🔹 *General Commands:*
-  - /start - Start the bot
-  - /help - Show this help message
-  - /ping - Check bot response time
-  - /id - Get your Telegram ID
-  - /userinfo - Get detailed user info
-
-🔹 *Admin Commands* _(Group Only)_
-  - /ban [reply] - Ban a user
-  - /unban [user_id] - Unban a user
-  - /mute [reply] - Mute a user
-  - /promote [reply] - Promote a user to admin
-  - /demote [reply] - Demote an admin to a regular user
-
-📌 *Usage Notes:*
-- Reply to a user's message when using /ban, /mute, /promote, or /demote.
-- /unban requires the user’s Telegram ID.
-- Admin commands work only in groups.
-
-📢 *For any issues, contact the bot owner.*`;
-
-    ctx.reply(helpMessage, { parse_mode: "Markdown" });
+📌 *Admin Commands (Group Only)*  
+- /ban [reply] - Ban a user  
+- /unban [user_id] - Unban a user  
+- /mute [reply] - Mute a user  
+- /promote [reply] - Promote a user  
+- /demote [reply] - Demote a user  
+    `, { parse_mode: "Markdown" });
 });
 
-// ✅ Ping Command
-bot.command("ping", async (ctx) => {
-    await pingCommand.ping(ctx);
-});
+// ✅ Register Commands
+bot.command("ping", pingCommand.ping);
+bot.command("id", idCommand.id);
+bot.command("userinfo", userInfoCommand.userinfo);
 
-// ✅ ID Command
-bot.command("id", async (ctx) => {
-    await idCommand.id(ctx);
-});
-
-// ✅ User Info Command
-bot.command("userinfo", async (ctx) => {
-    await userInfoCommand.userinfo(ctx);
-});
-
-// ✅ Admin Commands (Only Work in Groups)
+// ✅ Register Admin Commands (Group Only)
 ["ban", "unban", "mute", "promote", "demote"].forEach((cmd) => {
     bot.command(cmd, async (ctx) => {
         if (ctx.chat.type !== "private") {
@@ -125,11 +88,6 @@ bot.command("userinfo", async (ctx) => {
     });
 });
 
-// ✅ General Text Handler
-bot.on("text", async (ctx) => {
-    await generalCommands.handleText(ctx);
-});
-
 // ✅ Error Handling
 bot.catch((err, ctx) => {
     logger.error(`❌ Bot Error: ${err.message}`);
@@ -137,15 +95,17 @@ bot.catch((err, ctx) => {
 });
 
 // ✅ Graceful Shutdown
-const shutdownBot = (signal) => {
-    bot.stop(signal);
-    mongoose.connection.close(() => logger.info(`⚠️ MongoDB Disconnected. Bot stopped (${signal}).`));
-};
+process.on("SIGINT", () => {
+    bot.stop("SIGINT");
+    mongoose.connection.close(() => logger.info("⚠️ MongoDB Disconnected. Bot stopped."));
+});
 
-process.on("SIGINT", () => shutdownBot("SIGINT"));
-process.on("SIGTERM", () => shutdownBot("SIGTERM"));
+process.on("SIGTERM", () => {
+    bot.stop("SIGTERM");
+    mongoose.connection.close(() => logger.info("⚠️ MongoDB Disconnected. Bot stopped."));
+});
 
-// ✅ Start Bot with MongoDB Connection
+// ✅ Start Bot
 (async () => {
     await connectDB();
     bot.launch()
