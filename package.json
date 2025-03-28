@@ -1,35 +1,26 @@
 {
-  "name": "telegram-group-management-bot",
+  "name": "telegram-group-bot",
   "version": "1.0.0",
-  "description": "A fast, secure, and feature-rich Telegram group management bot built with Node.js and MongoDB.",
-  "main": "bot.js",
+  "description": "A Telegram group management bot built with Node.js, Telegraf, and MongoDB",
+  "main": "src/bot.js",
   "scripts": {
-    "start": "node bot.js",
-    "dev": "nodemon bot.js",
-    "lint": "eslint .",
-    "docker": "docker-compose up --build"
+    "start": "node src/bot.js",
+    "dev": "nodemon src/bot.js",
+    "lint": "eslint . --fix"
   },
   "dependencies": {
+    "dotenv": "^16.3.1",
+    "mongoose": "^7.5.0",
     "telegraf": "^4.12.2",
-    "mongoose": "^7.0.0",
-    "dotenv": "^16.0.3",
-    "winston": "^3.8.2"
+    "winston": "^3.9.0"
   },
   "devDependencies": {
-    "nodemon": "^3.0.0",
-    "eslint": "^8.56.0"
+    "eslint": "^8.50.0",
+    "nodemon": "^3.0.3"
   },
   "engines": {
-    "node": ">=16.0.0"
+    "node": ">=18.0.0"
   },
-  "keywords": [
-    "telegram",
-    "bot",
-    "group-management",
-    "telegraf",
-    "nodejs",
-    "mongodb"
-  ],
   "author": "Your Name",
   "license": "MIT"
 }
