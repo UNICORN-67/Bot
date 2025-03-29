@@ -1,6 +1,6 @@
 const { Telegraf } = require('telegraf');
-const isAdmin = require('../middlewares/isAdmin');
-const logger = require('../utils/logger');
+const isAdmin = require('./middlewares/isAdmin');
+const logger = require('./utils/logger');
 
 module.exports = (bot) => {
     const getUser = (ctx) => {
