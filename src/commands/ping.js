@@ -1,8 +1,13 @@
-module.exports = {
-    ping: async (ctx) => {
-        const startTime = Date.now();
-        await ctx.reply("🏓 Pong! Checking latency...");
-        const latency = Date.now() - startTime;
-        ctx.reply(`✅ Bot is online!\n⏳ Response Time: ${latency}ms`);
-    },
+module.exports = (bot) => {
+    bot.command('ping', async (ctx) => {
+        try {
+            const start = Date.now();
+            await ctx.reply('🏓 Pong!');
+            const end = Date.now();
+            ctx.reply(`⏳ Response time: ${end - start}ms`);
+        } catch (error) {
+            console.error('❌ Error in ping command:', error);
+            ctx.reply('⚠️ Failed to execute ping command.');
+        }
+    });
 };
