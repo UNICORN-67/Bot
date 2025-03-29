@@ -4,7 +4,6 @@ const config = require('./config/config');
 const logger = require('./utils/logger');
 
 // Import all commands
-const userinfo = require('./commands/userinfo');
 const idCommand = require('./commands/id');
 const adminCommands = require('./commands/admin');
 const generalCommands = require('./commands/general');
@@ -31,7 +30,6 @@ async function connectDB() {
 // ✅ Load Commands
 function loadCommands() {
     try {
-        userinfo(bot);
         idCommand(bot);
         adminCommands(bot);
         generalCommands(bot);
