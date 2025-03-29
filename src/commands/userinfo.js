@@ -2,15 +2,19 @@ module.exports = (bot) => {
     bot.command('userinfo', async (ctx) => {
         try {
             const chat = ctx.chat;
-            const user = ctx.from;
 
-            // Restrict to groups only
-            if (chat.type === 'private') {
+            // Ensure command works only in groups
+            if (!['group', 'supergroup'].includes(chat.type)) {
                 return ctx.reply('❌ This command can only be used in groups.');
             }
 
-            // Escape special characters for Telegram MarkdownV2
-            const escapeMD = (text) => text ? text.replace(/([_*[\]()~`>#+\-=|{}.!])/g, '\\$1') : 'N/A';
+            // Determine which user's info to show (reply or sender)
+            const user = ctx.message.reply_to_message ? ctx.message.reply_to_message.from : ctx.from;
+
+            // ✅ Properly escape all characters for MarkdownV2
+            const escapeMD = (text) => {
+                return text ? text.replace(/([_*[\]()~`>#+\-=|{}.!])/g, '\\$1') : 'N/A';
+            };
 
             const message = `👤 *User Info*
 🆔 *ID:* \`${user.id}\`
