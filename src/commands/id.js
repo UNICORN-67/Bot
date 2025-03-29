@@ -1,14 +1,22 @@
-module.exports = {
-    id: async (ctx) => {
+module.exports = (bot) => {
+    bot.command('id', async (ctx) => {
         try {
-            const userId = ctx.from.id;
-            const username = ctx.from.username ? `@${ctx.from.username}` : "No username";
-            const message = `🆔 Your Telegram ID: \`${userId}\`\n👤 Username: ${username}`;
+            const user = ctx.message.reply_to_message ? ctx.message.reply_to_message.from : ctx.from;
+            const chat = ctx.chat;
+            let response = `👤 *User ID:* \`${user.id}\`
+📌 *Chat ID:* \`${chat.id}\``;
             
-            await ctx.reply(message, { parse_mode: "Markdown" });
+            if (user.username) {
+                response += `\n🌐 *Username:* @${user.username}`;
+            }
+            if (chat.type !== 'private') {
+                response += `\n🏷 *Chat Title:* ${chat.title}`;
+            }
+            
+            ctx.reply(response, { parse_mode: 'MarkdownV2' });
         } catch (error) {
-            console.error("Error in ID command:", error);
-            await ctx.reply("⚠️ An error occurred while fetching your ID.");
+            console.error('Error in ID command:', error);
+            ctx.reply('❌ An error occurred while fetching the ID.');
         }
-    }
+    });
 };
