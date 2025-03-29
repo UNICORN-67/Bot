@@ -4,9 +4,9 @@ module.exports = (bot) => {
             const user = ctx.from;
             const chat = ctx.chat;
 
-            // Escape MarkdownV2 special characters
+            // ✅ Escape Telegram MarkdownV2 special characters
             const escapeMarkdownV2 = (text) => {
-                return text.replace(/[_*[\]()~`>#+\-=|{}.!]/g, '\\$&');
+                return text.replace(/([_*[\]()~`>#+\-=|{}.!])/g, '\\$1');
             };
 
             const message = `👤 *User Info*:
