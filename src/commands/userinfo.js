@@ -1,24 +1,31 @@
-module.exports = {
-    userinfo: async (ctx) => {
+module.exports = (bot) => {
+    bot.command('userinfo', async (ctx) => {
         try {
             const user = ctx.message.reply_to_message ? ctx.message.reply_to_message.from : ctx.from;
-            const userId = user.id;
-            const username = user.username ? `@${user.username}` : "No username";
-            const firstName = user.first_name || "No first name";
-            const lastName = user.last_name ? user.last_name : "No last name";
-            const isBot = user.is_bot ? "Yes" : "No";
-
-            const message = `👤 **User Info**:
-🆔 **User ID:** \`${userId}\`
-📛 **Username:** ${username}
-📝 **First Name:** ${firstName}
-📝 **Last Name:** ${lastName}
-🤖 **Bot:** ${isBot}`;
-
-            await ctx.reply(message, { parse_mode: "Markdown" });
+            const chat = ctx.chat;
+            
+            let response = `👤 *User Info:*
+`;
+            response += `🆔 *User ID:* \`${user.id}\`\n`;
+            if (user.username) {
+                response += `🌐 *Username:* @${user.username}\n`;
+            }
+            response += `👤 *First Name:* ${user.first_name}\n`;
+            if (user.last_name) {
+                response += `📝 *Last Name:* ${user.last_name}\n`;
+            }
+            if (user.language_code) {
+                response += `🌍 *Language Code:* ${user.language_code}\n`;
+            }
+            response += `📌 *Chat ID:* \`${chat.id}\`\n`;
+            if (chat.type !== 'private') {
+                response += `🏷 *Chat Title:* ${chat.title}\n`;
+            }
+            
+            ctx.reply(response, { parse_mode: 'MarkdownV2' });
         } catch (error) {
-            console.error("Error in userinfo command:", error);
-            await ctx.reply("⚠️ An error occurred while fetching user info.");
+            console.error('Error in userinfo command:', error);
+            ctx.reply('❌ An error occurred while fetching user information.');
         }
-    }
+    });
 };
