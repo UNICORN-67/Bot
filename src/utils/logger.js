@@ -1,39 +1,59 @@
-const { createLogger, format, transports } = require("winston");
-const path = require("path");
+const { bot } = require("../bot");
 const fs = require("fs");
+const path = require("path");
+const config = require("../config/config");
 
-// ✅ Ensure Logs Directory Exists
-const logDir = path.join(__dirname, "../../logs");
-if (!fs.existsSync(logDir)) {
-    fs.mkdirSync(logDir, { recursive: true });
+const logFilePath = path.join(__dirname, "../logs/bot.log");
+
+// Function to write logs to a file
+function writeToFile(message) {
+    const logMessage = `[${new Date().toISOString()}] ${message}\n`;
+    fs.appendFile(logFilePath, logMessage, (err) => {
+        if (err) console.error("Error writing to log file:", err);
+    });
 }
 
-// ✅ Define Log Format
-const logFormat = format.combine(
-    format.timestamp({ format: "YYYY-MM-DD HH:mm:ss" }),
-    format.printf(({ timestamp, level, message }) => {
-        // Ensure message is always a string to prevent TypeErrors
-        const safeMessage = typeof message === "string" ? message : JSON.stringify(message, null, 2);
-        return `${timestamp} [${level.toUpperCase()}]: ${safeMessage}`;
-    })
-);
+// Function to send logs to a Telegram log channel
+async function sendToLogChannel(message) {
+    if (config.LOG_CHANNEL_ID) {
+        try {
+            await bot.telegram.sendMessage(config.LOG_CHANNEL_ID, message, { parse_mode: "Markdown" });
+        } catch (error) {
+            console.error("Failed to send log to channel:", error.message);
+        }
+    }
+}
 
-// ✅ Create Logger
-const logger = createLogger({
-    level: "info", // Log levels: error, warn, info, http, verbose, debug, silly
-    format: logFormat,
-    transports: [
-        new transports.Console({ format: format.combine(format.colorize(), logFormat) }),
-        new transports.File({ filename: path.join(logDir, "bot.log"), level: "info" }),
-        new transports.File({ filename: path.join(logDir, "error.log"), level: "error" })
-    ]
-});
+// General log function
+function logInfo(message) {
+    console.log(message);
+    writeToFile(`[INFO] ${message}`);
+    sendToLogChannel(`📝 *Info:* ${message}`);
+}
 
-// ✅ Safe Logger Wrapper to Avoid TypeErrors
-const safeLogger = {
-    info: (msg) => logger.info(typeof msg === "string" ? msg : JSON.stringify(msg, null, 2)),
-    warn: (msg) => logger.warn(typeof msg === "string" ? msg : JSON.stringify(msg, null, 2)),
-    error: (msg) => logger.error(typeof msg === "string" ? msg : JSON.stringify(msg, null, 2))
-};
+// Error log function
+function logError(error) {
+    console.error(error);
+    writeToFile(`[ERROR] ${error}`);
+    sendToLogChannel(`❌ *Error:* ${error}`);
+}
 
-module.exports = safeLogger;
+// Log user bans
+function logBan(user, admin) {
+    const message = `🚫 *User Banned:* ${user.first_name} (${user.id}) by ${admin.first_name} (${admin.id})`;
+    logInfo(message);
+}
+
+// Log user unbans
+function logUnban(user, admin) {
+    const message = `✅ *User Unbanned:* ${user.first_name} (${user.id}) by ${admin.first_name} (${admin.id})`;
+    logInfo(message);
+}
+
+// Log user leaving the group
+function logUserLeft(user) {
+    const message = `🚪 *User Left:* ${user.first_name} (${user.id})`;
+    logInfo(message);
+}
+
+module.exports = { logInfo, logError, logBan, logUnban, logUserLeft };
