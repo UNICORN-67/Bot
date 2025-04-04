@@ -12,7 +12,7 @@ import loadCommands from './utils/commandLoader.js';
 
 // Middlewares
 import abuseFilter from './middleware/abuse.js';
-import spamProtect from './middleware/spam.js';
+// import spamProtect from './middleware/spam.js';//
 import permissions from './middleware/permissions.js';
 import nsfwScan from './middleware/nsfw.js';
 
