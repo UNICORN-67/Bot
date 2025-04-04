@@ -2,12 +2,12 @@ const fs = require('fs');
 const path = require('path');
 const { Telegraf } = require('telegraf');
 const mongoose = require('mongoose');
-const config = require('../config/config');
-const abuseFilter = require('../middleware/abuse');
-const spamProtect = require('../middleware/spam');
-const permissions = require('../middleware/permissions');
-const nsfwCheck = require('../middleware/nsfw');
-const logger = require('../utils/logger');
+const config = require('./config/config');
+const abuseFilter = require('./middleware/abuse');
+const spamProtect = require('./middleware/spam');
+const permissions = require('./middleware/permissions');
+const nsfwCheck = require('./middleware/nsfw');
+const logger = require('./utils/logger');
 
 const bot = new Telegraf(config.BOT_TOKEN);
 
