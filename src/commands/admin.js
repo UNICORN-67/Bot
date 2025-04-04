@@ -1,127 +1,129 @@
-const { Telegraf } = require('telegraf');
-const isAdmin = require('../middleware/isAdmin');
-const logger = require('../utils/logger');
+const { isAdmin } = require('../middleware/permissions');
+const { sendLog } = require('../utils/logger');
 
 module.exports = (bot) => {
-    const getUser = (ctx) => {
-        if (ctx.message.reply_to_message) {
-            return ctx.message.reply_to_message.from;
-        } else {
-            const username = ctx.message.text.split(' ')[1];
-            if (!username) return null;
-            return ctx.telegram.getChatMember(ctx.chat.id, username);
-        }
-    };
+  // Utility to get user from mention, reply, or ID
+  const getTargetUser = (ctx) => {
+    if (ctx.message.reply_to_message) return ctx.message.reply_to_message.from;
+    const arg = ctx.message.text.split(' ')[1];
+    if (!arg) return null;
+    if (arg.startsWith('@')) return { username: arg };
+    if (!isNaN(arg)) return { id: parseInt(arg) };
+    return null;
+  };
 
-    bot.command('promote', async (ctx) => {
-        try {
-            if (!(await isAdmin(ctx))) return;
-            const user = getUser(ctx);
-            if (!user) return ctx.reply('Reply to a user or provide a username to promote.');
-            await ctx.telegram.promoteChatMember(ctx.chat.id, user.id, {
-                can_manage_chat: true,
-                can_delete_messages: true,
-                can_restrict_members: true,
-                can_promote_members: false
-            });
-            ctx.reply(`Promoted ${user.first_name || username} to admin.`);
-            logger.info(`User ${user.id} promoted in chat ${ctx.chat.id}`);
-        } catch (error) {
-            logger.error("Error in promote command:", error);
-            ctx.reply("An error occurred while promoting.");
-        }
-    });
+  bot.command('ban', isAdmin, async (ctx) => {
+    const user = getTargetUser(ctx);
+    if (!user) return ctx.reply('⚠️ Specify a user to ban.');
 
-    bot.command('demote', async (ctx) => {
-        try {
-            if (!(await isAdmin(ctx))) return;
-            const user = getUser(ctx);
-            if (!user) return ctx.reply('Reply to a user or provide a username to demote.');
-            await ctx.telegram.promoteChatMember(ctx.chat.id, user.id, {
-                can_manage_chat: false,
-                can_delete_messages: false,
-                can_restrict_members: false,
-                can_promote_members: false
-            });
-            ctx.reply(`Demoted ${user.first_name || username}.`);
-            logger.info(`User ${user.id} demoted in chat ${ctx.chat.id}`);
-        } catch (error) {
-            logger.error("Error in demote command:", error);
-            ctx.reply("An error occurred while demoting.");
-        }
-    });
+    try {
+      await ctx.banChatMember(user.id || user.username);
+      await ctx.reply('✅ User banned.');
+      sendLog(`User Banned: ${user.id || user.username}`);
+    } catch (err) {
+      ctx.reply('❌ Failed to ban user.');
+    }
+  });
 
-    bot.command('mute', async (ctx) => {
-        try {
-            if (!(await isAdmin(ctx))) return;
-            const user = getUser(ctx);
-            if (!user) return ctx.reply('Reply to a user or provide a username to mute.');
-            await ctx.telegram.restrictChatMember(ctx.chat.id, user.id, {
-                permissions: { can_send_messages: false }
-            });
-            ctx.reply(`${user.first_name || username} has been muted.`);
-            logger.info(`User ${user.id} muted in chat ${ctx.chat.id}`);
-        } catch (error) {
-            logger.error("Error in mute command:", error);
-            ctx.reply("An error occurred while muting.");
-        }
-    });
+  bot.command('unban', isAdmin, async (ctx) => {
+    const user = getTargetUser(ctx);
+    if (!user) return ctx.reply('⚠️ Specify a user to unban.');
 
-    bot.command('unmute', async (ctx) => {
-        try {
-            if (!(await isAdmin(ctx))) return;
-            const user = getUser(ctx);
-            if (!user) return ctx.reply('Reply to a user or provide a username to unmute.');
-            await ctx.telegram.restrictChatMember(ctx.chat.id, user.id, {
-                permissions: { can_send_messages: true }
-            });
-            ctx.reply(`${user.first_name || username} has been unmuted.`);
-            logger.info(`User ${user.id} unmuted in chat ${ctx.chat.id}`);
-        } catch (error) {
-            logger.error("Error in unmute command:", error);
-            ctx.reply("An error occurred while unmuting.");
-        }
-    });
+    try {
+      await ctx.unbanChatMember(user.id || user.username);
+      await ctx.reply('✅ User unbanned.');
+      sendLog(`User Unbanned: ${user.id || user.username}`);
+    } catch {
+      ctx.reply('❌ Failed to unban user.');
+    }
+  });
 
-    bot.command('kick', async (ctx) => {
-        try {
-            if (!(await isAdmin(ctx))) return;
-            const user = getUser(ctx);
-            if (!user) return ctx.reply('Reply to a user or provide a username to kick.');
-            await ctx.telegram.kickChatMember(ctx.chat.id, user.id);
-            ctx.reply(`${user.first_name || username} has been kicked.`);
-            logger.info(`User ${user.id} kicked from chat ${ctx.chat.id}`);
-        } catch (error) {
-            logger.error("Error in kick command:", error);
-            ctx.reply("An error occurred while kicking.");
-        }
-    });
+  bot.command('kick', isAdmin, async (ctx) => {
+    const user = getTargetUser(ctx);
+    if (!user) return ctx.reply('⚠️ Specify a user to kick.');
 
-    bot.command('ban', async (ctx) => {
-        try {
-            if (!(await isAdmin(ctx))) return;
-            const user = getUser(ctx);
-            if (!user) return ctx.reply('Reply to a user or provide a username to ban.');
-            await ctx.telegram.banChatMember(ctx.chat.id, user.id);
-            ctx.reply(`${user.first_name || username} has been banned.`);
-            logger.info(`User ${user.id} banned from chat ${ctx.chat.id}`);
-        } catch (error) {
-            logger.error("Error in ban command:", error);
-            ctx.reply("An error occurred while banning.");
-        }
-    });
+    try {
+      await ctx.kickChatMember(user.id || user.username);
+      await ctx.unbanChatMember(user.id || user.username); // allow them to rejoin
+      await ctx.reply('✅ User kicked.');
+      sendLog(`User Kicked: ${user.id || user.username}`);
+    } catch {
+      ctx.reply('❌ Failed to kick user.');
+    }
+  });
 
-    bot.command('unban', async (ctx) => {
-        try {
-            if (!(await isAdmin(ctx))) return;
-            const user = getUser(ctx);
-            if (!user) return ctx.reply('Reply to a user or provide a username to unban.');
-            await ctx.telegram.unbanChatMember(ctx.chat.id, user.id);
-            ctx.reply(`${user.first_name || username} has been unbanned.`);
-            logger.info(`User ${user.id} unbanned in chat ${ctx.chat.id}`);
-        } catch (error) {
-            logger.error("Error in unban command:", error);
-            ctx.reply("An error occurred while unbanning.");
-        }
-    });
+  bot.command('mute', isAdmin, async (ctx) => {
+    const user = getTargetUser(ctx);
+    if (!user) return ctx.reply('⚠️ Specify a user to mute.');
+
+    try {
+      await ctx.restrictChatMember(user.id || user.username, {
+        permissions: { can_send_messages: false },
+      });
+      await ctx.reply('🔇 User muted.');
+      sendLog(`User Muted: ${user.id || user.username}`);
+    } catch {
+      ctx.reply('❌ Failed to mute user.');
+    }
+  });
+
+  bot.command('unmute', isAdmin, async (ctx) => {
+    const user = getTargetUser(ctx);
+    if (!user) return ctx.reply('⚠️ Specify a user to unmute.');
+
+    try {
+      await ctx.restrictChatMember(user.id || user.username, {
+        permissions: {
+          can_send_messages: true,
+          can_send_media_messages: true,
+          can_send_other_messages: true,
+          can_add_web_page_previews: true,
+        },
+      });
+      await ctx.reply('🔊 User unmuted.');
+      sendLog(`User Unmuted: ${user.id || user.username}`);
+    } catch {
+      ctx.reply('❌ Failed to unmute user.');
+    }
+  });
+
+  bot.command('promote', isAdmin, async (ctx) => {
+    const user = getTargetUser(ctx);
+    if (!user) return ctx.reply('⚠️ Specify a user to promote.');
+
+    try {
+      await ctx.promoteChatMember(user.id || user.username, {
+        can_change_info: true,
+        can_delete_messages: true,
+        can_invite_users: true,
+        can_restrict_members: true,
+        can_pin_messages: true,
+        can_promote_members: false,
+      });
+      await ctx.reply('✅ User promoted to admin.');
+      sendLog(`User Promoted: ${user.id || user.username}`);
+    } catch {
+      ctx.reply('❌ Failed to promote user.');
+    }
+  });
+
+  bot.command('demote', isAdmin, async (ctx) => {
+    const user = getTargetUser(ctx);
+    if (!user) return ctx.reply('⚠️ Specify a user to demote.');
+
+    try {
+      await ctx.promoteChatMember(user.id || user.username, {
+        can_change_info: false,
+        can_delete_messages: false,
+        can_invite_users: false,
+        can_restrict_members: false,
+        can_pin_messages: false,
+        can_promote_members: false,
+      });
+      await ctx.reply('✅ User demoted from admin.');
+      sendLog(`User Demoted: ${user.id || user.username}`);
+    } catch {
+      ctx.reply('❌ Failed to demote user.');
+    }
+  });
 };
