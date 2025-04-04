@@ -7,7 +7,7 @@ import { fileURLToPath } from 'url';
 
 import config from './config/config.js';
 import logger from './utils/logger.js';
-import { autoCleanTemp } from './utils/helper.js';
+import { autoCleanTemp } from './utils/helpers.js';
 import loadCommands from './utils/commandLoader.js';
 
 // Middlewares
