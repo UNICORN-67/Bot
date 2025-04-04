@@ -1,37 +1,46 @@
 const spamTracker = new Map();
 
-module.exports = async (ctx, next) => {
-    if (!ctx.message || !ctx.message.from) return next();
-    
-    const userId = ctx.message.from.id;
-    const now = Date.now();
-    
-    if (!spamTracker.has(userId)) {
-        spamTracker.set(userId, { count: 1, lastMessage: now });
-    } else {
-        const userData = spamTracker.get(userId);
-        const timeDiff = now - userData.lastMessage;
+const SPAM_LIMIT = 5; // Number of messages allowed
+const TIME_FRAME = 5000; // in milliseconds
+const BAN_DURATION = 60 * 5; // in seconds (optional mute)
 
-        if (timeDiff < 3000) { // 3-second spam detection
-            userData.count++;
-        } else {
-            userData.count = 1;
-        }
+export default async function spamProtect(ctx, next) {
+  if (!ctx.from || !ctx.chat || ctx.chat.type === 'private') return next();
 
-        userData.lastMessage = now;
+  const key = `${ctx.chat.id}:${ctx.from.id}`;
+  const now = Date.now();
 
-        if (userData.count > 5) { // More than 5 messages in 3 sec = spam
-            try {
-                await ctx.deleteMessage();
-                await ctx.reply(`⚠️ Stop spamming, ${ctx.from.first_name}!`);
-            } catch (err) {
-                console.error('Error handling spam:', err);
-            }
-            return;
-        }
-        
-        spamTracker.set(userId, userData);
+  if (!spamTracker.has(key)) {
+    spamTracker.set(key, []);
+  }
+
+  const timestamps = spamTracker.get(key).filter(ts => now - ts < TIME_FRAME);
+  timestamps.push(now);
+  spamTracker.set(key, timestamps);
+
+  if (timestamps.length > SPAM_LIMIT) {
+    try {
+      // Optional mute or kick
+      await ctx.restrictChatMember(ctx.from.id, {
+        permissions: {
+          can_send_messages: false,
+        },
+        until_date: Math.floor(now / 1000) + BAN_DURATION,
+      });
+
+      await ctx.replyWithMarkdown(
+        `⚠️ *${ctx.from.first_name}*, you have been muted for spamming.`
+      );
+
+      console.log(`User ${ctx.from.id} muted for spam in chat ${ctx.chat.id}`);
+    } catch (err) {
+      console.error('Spam protection error:', err);
     }
 
-    return next();
-};
+    spamTracker.set(key, []); // Reset tracker after punishment
+    return;
+  }
+
+  return next();
+}
+                
