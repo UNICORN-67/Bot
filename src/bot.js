@@ -1,71 +1,70 @@
-const fs = require('fs');
-const path = require('path');
-const { Telegraf } = require('telegraf');
-const mongoose = require('mongoose');
-const config = require('./config/config');
-const abuseFilter = require('./middleware/abuse');
-const spamProtect = require('./middleware/spam');
-const permissions = require('./middleware/permissions');
-const nsfwCheck = require('./middleware/nsfw');
-const logger = require('./utils/logger');
+import { Telegraf } from 'telegraf';
+import fs from 'fs-extra';
+import path from 'path';
+import dotenv from 'dotenv';
+import mongoose from 'mongoose';
+import { fileURLToPath } from 'url';
 
+import config from './config/config.js';
+import logger from './utils/logger.js';
+import { autoCleanTemp } from './utils/helper.js';
+import loadCommands from './utils/commandLoader.js';
+
+// Middlewares
+import abuseFilter from './middleware/abuse.js';
+import spamProtect from './middleware/spam.js';
+import permissions from './middleware/permissions.js';
+import nsfwScan from './middleware/nsfw.js';
+
+dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Ensure temp folder exists
+fs.ensureDirSync(path.join(__dirname, '../temp'));
+
+// Auto clean temp periodically
+autoCleanTemp();
+
+// Initialize bot
 const bot = new Telegraf(config.BOT_TOKEN);
 
-// ===== MongoDB Connection =====
+// MongoDB Connection
 mongoose.connect(config.MONGO_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true
-}).then(() => {
-  logger.info('MongoDB connected');
-}).catch(err => {
-  logger.error('MongoDB connection error:', err);
-});
+}).then(() => logger.info('✅ MongoDB connected'))
+  .catch((err) => logger.error('❌ MongoDB connection failed:', err));
 
-// ===== Temp Folder Setup =====
-const tempPath = path.join(__dirname, 'temp');
-if (!fs.existsSync(tempPath)) {
-  fs.mkdirSync(tempPath, { recursive: true });
-  logger.info('Temp folder created');
-} else {
-  fs.readdir(tempPath, (err, files) => {
-    if (!err) {
-      files.forEach(file => fs.unlink(path.join(tempPath, file), () => {}));
-      logger.info('Temp folder cleaned on startup');
-    }
-  });
-}
-setInterval(() => {
-  fs.readdir(tempPath, (err, files) => {
-    if (!err) {
-      files.forEach(file => fs.unlink(path.join(tempPath, file), () => {}));
-      logger.info('Temp folder auto-cleaned');
-    }
-  });
-}, 10 * 60 * 1000);
-
-// ===== Middleware Setup =====
-bot.use(abuseFilter);
-bot.use(spamProtect);
-bot.use(permissions);
-bot.use(nsfwCheck);
-
-// ===== Auto Load Commands =====
-const commandsPath = path.join(__dirname, 'commands');
-fs.readdirSync(commandsPath).forEach(file => {
-  const command = require(path.join(commandsPath, file));
-  if (command.name && typeof command.execute === 'function') {
-    bot.command(command.name, async (ctx) => {
-      try {
-        await command.execute(ctx);
-      } catch (err) {
-        logger.error(`Error in command /${command.name}:`, err);
-        ctx.reply('Something went wrong.');
-      }
-    });
+// Apply Middlewares
+bot.use(async (ctx, next) => {
+  try {
+    await permissions(ctx, next);
+  } catch (err) {
+    logger.error('Permission error:', err);
   }
 });
 
-// ===== Start Bot =====
-bot.launch()
-  .then(() => logger.info('Bot launched successfully'))
-  .catch(err => logger.error('Bot launch error:', err));
+bot.use(spamProtect);
+bot.use(abuseFilter);
+bot.use(nsfwScan);
+
+// Load all commands
+loadCommands(bot);
+
+// Error handler
+bot.catch((err, ctx) => {
+  logger.error(`Error in ${ctx.updateType}:`, err);
+});
+
+// Launch bot
+bot.launch().then(() => {
+  logger.info('🚀 Bot started successfully');
+}).catch((err) => {
+  logger.error('❌ Failed to launch bot:', err);
+});
+
+// Graceful shutdown
+process.once('SIGINT', () => bot.stop('SIGINT'));
+process.once('SIGTERM', () => bot.stop('SIGTERM'));
