@@ -1,4 +1,41 @@
+import fs from 'fs';
+import path from 'path';
+import logger from './logger.js';
 
+// Auto-clean temp folder periodically
+export function autoCleanTemp(interval = 60 * 60 * 1000) {
+  const tempPath = path.join(process.cwd(), 'temp');
+
+  // Create the temp folder if it doesn't exist
+  if (!fs.existsSync(tempPath)) {
+    fs.mkdirSync(tempPath, { recursive: true });
+    logger.info('Temp folder created.');
+  }
+
+  const clean = () => {
+    fs.readdir(tempPath, (err, files) => {
+      if (err) {
+        logger.error('Error reading temp folder:', err);
+        return;
+      }
+
+      files.forEach(file => {
+        const filePath = path.join(tempPath, file);
+        fs.unlink(filePath, (err) => {
+          if (err) {
+            logger.warn(`Failed to delete temp file: ${file}`, err);
+          } else {
+            logger.info(`Deleted temp file: ${file}`);
+          }
+        });
+      });
+    });
+  };
+
+  clean(); // Run cleanup once immediately
+  setInterval(clean, interval);
+  logger.info('Auto temp cleaner started.');
+}
 
 const { Markup } = require("telegraf");
 
