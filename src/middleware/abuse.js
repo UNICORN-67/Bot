@@ -1,4 +1,4 @@
-const badWords = require('../utils/badwords'); // List of abusive words
+const badWords = require('../utils/badWords'); // List of abusive words
 
 module.exports = async (ctx, next) => {
     if (!ctx.message || !ctx.message.text) return next();
