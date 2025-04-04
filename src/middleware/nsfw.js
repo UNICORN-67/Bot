@@ -1,4 +1,4 @@
-const { containsBadWords } = require('../utils/abuseFilter');
+const { containsBadWords } = require('../utils/badWords');
 const { isNSFWSticker, extractVideoFrameNSFW } = require('../utils/nsfwAI');
 const logger = require('../utils/logger');
 
