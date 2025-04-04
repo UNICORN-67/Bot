@@ -1,24 +1,26 @@
 module.exports = (bot) => {
-    bot.command('id', async (ctx) => {
-        try {
-            const chat = ctx.chat;
-            const user = ctx.message.reply_to_message ? ctx.message.reply_to_message.from : ctx.from;
+  bot.command('id', async (ctx) => {
+    try {
+      const reply = ctx.message.reply_to_message;
+      const user = reply ? reply.from : ctx.from;
 
-            // ✅ Escape special characters for MarkdownV2 while keeping bold & italic formatting
-            const escapeMD = (text) => {
-                return text ? text.replace(/([_*\[\]()~`>#+\-=|{}.!])/g, '\\$1') : 'N/A';
-            };
+      const userId = user.id;
+      const username = user.username ? `@${user.username}` : 'No Username';
+      const firstName = user.first_name || '';
+      const lastName = user.last_name || '';
+      const fullName = `${firstName} ${lastName}`.trim();
 
-            // ✅ Properly formatted message with bold & italic
-            const message = `🆔 *User ID:* \`${user.id}\`\n`
-                + `👤 *Name:* _${escapeMD(user.first_name)} ${user.last_name ? escapeMD(user.last_name) : ''}_\n`
-                + `📛 *Username:* ${user.username ? `@${escapeMD(user.username)}` : '_N/A_'}\n`
-                + `👥 *Chat ID:* \`${chat.id}\``;
+      const idInfo = `
+*User Info*
+• *Full Name:* _${fullName}_
+• *Username:* _${username}_
+• *User ID:* \`${userId}\`
+      `.trim();
 
-            await ctx.replyWithMarkdownV2(message);
-        } catch (error) {
-            console.error('❌ Error in ID command:', error);
-            ctx.reply('⚠️ Error fetching ID.');
-        }
-    });
+      await ctx.reply(idInfo, { parse_mode: 'Markdown' });
+    } catch (err) {
+      console.error('Error in ID command:', err.message);
+      await ctx.reply('❌ Failed to fetch user ID.');
+    }
+  });
 };
