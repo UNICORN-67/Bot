@@ -1,0 +1,41 @@
+module.exports = (bot) => {
+  bot.command('help', async (ctx) => {
+    try {
+      const helpText = `
+*🤖 Bot Command Help*
+
+*General Commands:*
+• */start* – _Start the bot_
+• */help* – _Show this help message_
+• */ping* – _Check bot latency and uptime_
+• */id* – _Get user ID from reply or self_
+• */userinfo* – _Get detailed user information_
+• */groupinfo* – _Get group information_
+• */link* – _Get group private link_
+
+*Admin Commands:*
+• */ban* – _Ban a user_
+• */unban* – _Unban a user_
+• */mute* – _Mute a user_
+• */unmute* – _Unmute a user_
+• */kick* – _Kick a user_
+• */promote* – _Promote a user to admin_
+• */demote* – _Demote a user from admin_
+
+*Moderation:*
+• */purge* – _Delete multiple messages_
+• *Auto-abuse filter* – _Removes abusive messages_
+• *NSFW remover* – _Deletes NSFW content automatically_
+• */kang* – _Steal/re-upload sticker to your pack_
+• */spamprotection* – _Toggle spam control_
+
+_Make sure the bot has admin rights to use admin features._
+      `.trim();
+
+      await ctx.reply(helpText, { parse_mode: 'Markdown' });
+    } catch (err) {
+      console.error('Error in /help command:', err);
+      await ctx.reply('❌ Failed to load help.');
+    }
+  });
+};
