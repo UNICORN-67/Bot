@@ -13,6 +13,10 @@ module.exports = {
   SPAM_PROTECTION_ENABLED: process.env.SPAM_PROTECTION_ENABLED === 'true',
   ABUSE_FILTER_ENABLED: process.env.ABUSE_FILTER_ENABLED === 'true',
 
+SIGHTENGINE_USER: process.env.SIGHTENGINE_USER || '260078919',
+  SIGHTENGINE_SECRET: process.env.SIGHTENGINE_SECRET || 'HQwvyTDX75WTXEr4jajnhWWybtrRidiX',
+
+
   TEMP_DIR: process.env.TEMP_DIR || './src/temp',
 
 };
