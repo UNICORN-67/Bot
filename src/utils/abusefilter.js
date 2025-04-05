@@ -1,4 +1,4 @@
-const badWords = require('./badwords');
+const badWords = require('./badWords');
 
 function containsBadWords(text = '') {
   return badWords.some(word => text.toLowerCase().includes(word));
