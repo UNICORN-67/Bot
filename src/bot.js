@@ -46,7 +46,7 @@ bot.use(async (ctx, next) => {
   }
 });
 
-bot.use(spamProtect);
+// bot.use(spamProtect); //
 bot.use(abuseFilter);
 bot.use(nsfwScan);
 
